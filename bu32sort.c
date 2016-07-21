@@ -23,6 +23,7 @@ int validate_sort(const uint32_t *a, const uint32_t *s, const unsigned int *p, u
       return(1);
     }
   }
+  printf("sort is valid.\n");
 
   return(0);
 } 
@@ -31,29 +32,38 @@ int bu32sort(const uint32_t *a, uint32_t **s, unsigned int **p, unsigned int N){
   unsigned int i;
   unsigned int d;
   unsigned char mask;
-  unsigned int C[256];
+  unsigned int *B,*C;
   uint32_t c, *reader, *writer, *b;
   unsigned int *ireader,*iwriter,rank,*I;
   mask = 0xFF;
 
 
-  *p = (unsigned int *) malloc(sizeof(unsigned int)*2*N);
-  *s = (uint32_t *) malloc(sizeof(uint32_t)*2*N);
+  //B = (unsigned int *) malloc(sizeof(unsigned int)*256*4);
+
+  /* Coalese our memory for both the permutation vector and the 
+     histogram into one call. */
+  *p = (unsigned int *) malloc(sizeof(unsigned int)*(2*N+(256*4)));
   I = *p;
+  /* Point B our histogram memory to the end of the permutation matrix. */
+  B = &I[2*N];
+
+  *s = (uint32_t *) malloc(sizeof(uint32_t)*2*N);
   b = *s;
 
-  rank = 1; 
-  iwriter = &I[((rank)%2)*N];
-  writer  = &b[((rank)%2)*N];
+  iwriter = &I[N];
+  writer  = &b[N];
 
   for(i=0;i<N;i++){
     iwriter[i]=i;
   }
+
+  memset(B,0,4*256*sizeof(unsigned int));
   memcpy(writer,a,sizeof(uint32_t)*N);
 
 
-  for(d=0;d<=24;d+=8){
-    rank++;
+  for(rank=0;rank<=3;rank++){
+    C=&B[rank<<8];
+    d=rank<<3;
 
     writer=&b[((rank)%2)*N];
     reader=&b[((rank+1)%2)*N];
@@ -61,7 +71,6 @@ int bu32sort(const uint32_t *a, uint32_t **s, unsigned int **p, unsigned int N){
     iwriter=&I[((rank)%2)*N];
     ireader=&I[((rank+1)%2)*N];
   
-    memset(C,0,256*sizeof(unsigned int));
     for(i=0;i<N;i++){
       c = (reader[i] >> d) & mask;
       C[c]+=1;
@@ -82,6 +91,9 @@ int bu32sort(const uint32_t *a, uint32_t **s, unsigned int **p, unsigned int N){
 
   }
 
+
+  //free(B);
+
   if(NULL==realloc(I,sizeof(unsigned int)*N)){
     return(1);
   }
@@ -89,6 +101,7 @@ int bu32sort(const uint32_t *a, uint32_t **s, unsigned int **p, unsigned int N){
   if(NULL==realloc(b,sizeof(uint32_t)*N)){
     return(1);
   }
+
 
   return(0);
 }
@@ -99,7 +112,7 @@ int main(){
   clock_t begin,end;
   double diff;
 
-  N = 10000000;
+  N = 100000000;
   M = 10000;
   a = (uint32_t *)malloc(sizeof(uint32_t)*N);
   //I = (unsigned int *)malloc(sizeof(unsigned int)*N);
