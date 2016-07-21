@@ -32,7 +32,7 @@ int bu32sort(const uint32_t *a, uint32_t **s, unsigned int **p, unsigned int N){
   unsigned int i;
   unsigned int d;
   unsigned char mask;
-  unsigned int *B,*C;
+  unsigned int B[256*4],*C;
   uint32_t c, *reader, *writer, *b;
   unsigned int *ireader,*iwriter,rank,*I;
   mask = 0xFF;
@@ -42,10 +42,8 @@ int bu32sort(const uint32_t *a, uint32_t **s, unsigned int **p, unsigned int N){
 
   /* Coalese our memory for both the permutation vector and the 
      histogram into one call. */
-  *p = (unsigned int *) malloc(sizeof(unsigned int)*(2*N+(256*4)));
+  *p = (unsigned int *) malloc(sizeof(unsigned int)*(2*N));
   I = *p;
-  /* Point B our histogram memory to the end of the permutation matrix. */
-  B = &I[2*N];
 
   *s = (uint32_t *) malloc(sizeof(uint32_t)*2*N);
   b = *s;
