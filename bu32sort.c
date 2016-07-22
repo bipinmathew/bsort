@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #define _0(x) (x &         0x000000FF)
 #define _1(x) ((x >> 8) &  0x000000FF)
 #define _2(x) ((x >> 16) & 0x000000FF)
@@ -95,6 +96,9 @@ int main(){
   uint32_t *a;
   unsigned int N,M,i,*I;
   clock_t begin,end;
+  struct timeval wbegin,wend;
+  double wdiff;
+  long long elapsed;
   int e;
   double diff;
 
@@ -112,10 +116,12 @@ int main(){
  //  }
  //  printf("\n");
 
+  gettimeofday(&wbegin,0);
   begin=clock();
   e=bu32sort(&a,&I,N);
-  end=clock();
-  diff=(double)(end - begin) / CLOCKS_PER_SEC;
+  diff=(double)(clock() - begin) / CLOCKS_PER_SEC;
+  gettimeofday(&wend,0);
+  elapsed = (wend.tv_sec-wbegin.tv_sec)*1000000LL + wend.tv_usec-wbegin.tv_usec;
 
   if(e>0){
     printf("  there appears to have been a memory allocation error.\n");
@@ -123,7 +129,7 @@ int main(){
   }
 
   if(validate_sort(a,I,N)==0){
-    printf("N: %u, M: %u,time: %f, uint32_t/sec: %f\n",N,M,diff,N/diff);
+    printf("N: %u, M: %u,ctime: %f, wtime: %f, uint32_t/sec: %f\n",N,M,diff,elapsed/(double)1000000,N/diff);
   }
   // for(i=0;i<N;i++){
   //   printf("%u ",a[I[i]]);
