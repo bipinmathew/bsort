@@ -99,7 +99,7 @@ int main(){
   double diff;
 
   N = 100000000;
-  M = 1000000;
+  M = 1000000000;
   a = (uint32_t *)malloc(sizeof(uint32_t)*N);
   //I = (unsigned int *)malloc(sizeof(unsigned int)*N);
 
