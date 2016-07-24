@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <emmintrin.h>
 #define _0(x) (x &         0x000000FF)
 #define _1(x) ((x >> 8) &  0x000000FF)
 #define _2(x) ((x >> 16) & 0x000000FF)
@@ -22,17 +23,17 @@ int validate_sort(const uint32_t *a, const unsigned int *p, unsigned int N){
   return(0);
 } 
 
-int bu32sort(uint32_t **A, unsigned int **p, unsigned int N){
+int bu32sort(const uint32_t *a, unsigned int **p, unsigned int N){
   unsigned int i;
   unsigned int d;
   static const unsigned int mask = 0x000000FF;
-  unsigned int B[4*256],*C,*a;
-  uint32_t c;
+  unsigned int B[4*256],*C;
+  uint32_t c,*buff;
   unsigned int *ireader,*iwriter,rank,*I;
-  uint32_t *reader,*writer;
+  const uint32_t *reader;
+  uint32_t *writer;
 
-  a = *A;
-  if(NULL==(a=realloc(a,2*N*sizeof(uint32_t)))){
+  if(NULL==(buff=malloc(2*N*sizeof(uint32_t)))){
     return(1);
   }
 
@@ -46,15 +47,14 @@ int bu32sort(uint32_t **A, unsigned int **p, unsigned int N){
     iwriter[i]=i;
   }
 
-
+  reader=&a[0];
+  writer=&buff[N];
 
   memset(B,0,4*256*sizeof(unsigned int));
   for(rank=0;rank<=3;rank++){
     C=&B[256*rank];
     d = rank*8;
 
-    reader=&a[((rank+1)%2)*N];
-    writer=&a[((rank)%2)*N];
 
     iwriter=&I[((rank)%2)*N];
     ireader=&I[((rank+1)%2)*N];
@@ -77,16 +77,15 @@ int bu32sort(uint32_t **A, unsigned int **p, unsigned int N){
     }
 
 
+    reader=&buff[((rank+1)%2)*N];
+    writer=&buff[((rank)%2)*N];
+
+
   }
 
-  if(NULL==(a=realloc(a,sizeof(uint32_t)*N))){
-    return(1);
-  }
   if(NULL==realloc(I,sizeof(unsigned int)*N)){
     return(1);
   }
-
-  *A = a;
 
   return(0);
 }
@@ -99,21 +98,23 @@ int main(){
   double diff;
 
   N = 100000000;
-  M = 1000000000;
+  M = 10000000;
   a = (uint32_t *)malloc(sizeof(uint32_t)*N);
   //I = (unsigned int *)malloc(sizeof(unsigned int)*N);
+
+  printf("RAND_MAX: %u \n",RAND_MAX);
 
   for(i=0;i<N;i++){
     a[i] = rand()%M;
   }
 
- // for(i=0;i<N;i++){
- //    printf("%u ",a[i]);
- //  }
- //  printf("\n");
+  // for(i=0;i<N;i++){
+  //   printf("%u ",a[i]);
+  // }
+  // printf("\n");
 
   begin=clock();
-  e=bu32sort(&a,&I,N);
+  e=bu32sort(a,&I,N);
   end=clock();
   diff=(double)(end - begin) / CLOCKS_PER_SEC;
 
@@ -125,10 +126,11 @@ int main(){
   if(validate_sort(a,I,N)==0){
     printf("N: %u, M: %u,time: %f, uint32_t/sec: %f\n",N,M,diff,N/diff);
   }
-  // for(i=0;i<N;i++){
-  //   printf("%u ",a[I[i]]);
-  // }
-  // printf("\n");
+
+  //for(i=0;i<N;i++){
+  //  printf("%u ",a[I[i]]);
+  //}
+  //printf("\n");
 
   free(a);
   free(I);
