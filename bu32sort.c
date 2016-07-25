@@ -50,7 +50,8 @@ int bu32sort(const uint32_t *a, unsigned int **p, unsigned int N){
   static const unsigned int mask = 0x000000FF;
   unsigned int B[4*256],*C;
   uint32_t c,*buff;
-  unsigned int *ireader,*iwriter,rank,*I;
+  unsigned int *iwriter,rank,*I;
+  const unsigned int *ireader;
   const uint32_t *reader;
   uint32_t *writer;
 
@@ -65,12 +66,13 @@ int bu32sort(const uint32_t *a, unsigned int **p, unsigned int N){
   }
 
   I = *p;
-  ireader=&I[0];
-  iwriter=&I[N];
 
+  iwriter=&I[0];
   for(i=0;i<N;i++){
-    ireader[i]=i;
+    iwriter[i]=i;
   }
+  ireader=iwriter;
+  iwriter=&I[N];
 
   reader=&a[0];
   writer=&buff[N];
@@ -126,7 +128,7 @@ int main(){
 
 
   N=1;
-  for(n=0;n<8;n++){
+  for(n=0;n<7;n++){
     N*=10;
     M=1;
     for(m=0;m<9;m++){
