@@ -44,10 +44,12 @@ int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
   return(0);
 } 
 
-int bu32sort(const int32_t *a, unsigned int **p, unsigned int N){
+int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   unsigned int i,j;
   unsigned int d;
   static const unsigned int mask = 0x000000FF;
+  static const unsigned int dmask[4] = {0xFF,0xFF,0xFF,0xFF};
+  unsigned int count[4];
   unsigned int B[4*256],*C;
   int32_t c,*buff;
   unsigned int *iwriter,rank,*I;
@@ -55,6 +57,12 @@ int bu32sort(const int32_t *a, unsigned int **p, unsigned int N){
   const int32_t *reader;
   int32_t *writer;
 
+  static const unsigned int BLOCKSIZE = 4;
+  unsigned int remainder;
+  __m128i *src, xmm0,xmask;
+
+  remainder = N%BLOCKSIZE;
+  xmask = _mm_loadu_si128((__m128i*)dmask);
 
   if((buff=malloc(2*N*sizeof(int32_t)))==NULL){
     return(1);
@@ -82,8 +90,18 @@ int bu32sort(const int32_t *a, unsigned int **p, unsigned int N){
     C=&B[256*rank];
     d = rank*8;
 
-  
-    for(i=0;i<N;i++){
+ 
+    src = (__m128i*)reader; 
+    for(i=0;i<N-remainder;i+=BLOCKSIZE){
+      xmm0 = _mm_loadu_si128(src++);
+      xmm0 = _mm_srli_epi32(xmm0,d);
+      xmm0 = _mm_and_si128(xmm0,xmask);
+      _mm_storeu_si128((__m128i *)count,xmm0);
+      for(j=0;j<BLOCKSIZE;j++){
+        C[count[j]]+=1;
+      }
+    }
+    for(i=N-remainder;i<N;i++){
       c = (reader[i] >> d) & mask;
       C[c]+=1;
     }
@@ -91,7 +109,12 @@ int bu32sort(const int32_t *a, unsigned int **p, unsigned int N){
     for(i=1;i<256;i++){
       C[i]=C[i]+C[i-1];
     }
+  }
+  
 
+  for(rank=0;rank<=2;rank++){
+    C=&B[256*rank];
+    d = rank*8;
     for(j=1;j<=N;j++){
       i=N-j;
       c = (reader[i] >> d) & mask;
@@ -111,7 +134,7 @@ int bu32sort(const int32_t *a, unsigned int **p, unsigned int N){
   }
 
 
-
+  /* unroll the last rank because we have to do something a bit different */
   rank=3;
 
   C=&B[256*rank];
@@ -142,12 +165,6 @@ int bu32sort(const int32_t *a, unsigned int **p, unsigned int N){
   writer=&buff[((rank)%2)*N];
   reader=&buff[((rank+1)%2)*N];
 
-
-
-
-
-
-
   if((*p=realloc(*p,sizeof(unsigned int)*N))==NULL){
     return(1);
   }
@@ -165,7 +182,7 @@ int main(){
 
 
   N=1;
-  for(n=0;n<7;n++){
+  for(n=0;n<8;n++){
     N*=10;
     M=1;
     for(m=0;m<9;m++){
@@ -181,7 +198,7 @@ int main(){
 
 
         begin=clock();
-        e=bu32sort(a,&I,N);
+        e=b32sort(a,&I,N);
         end=clock();
         diff=(double)(end - begin) / CLOCKS_PER_SEC;
 
