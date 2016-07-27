@@ -99,7 +99,6 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     src = (__m128i*)reader; 
     for(i=0;i<N-remainder;i+=BLOCKSIZE){
       xmm0 = _mm_loadu_si128(src++);
-      xmm0 = _mm_srli_epi32(xmm0,d);
       r1 = _mm_and_si128(xmm0,xmask1);
       r2 = _mm_and_si128(xmm0,xmask2);
       r3 = _mm_and_si128(xmm0,xmask3);
@@ -120,13 +119,21 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
       }
     }
 
-    for(rank=0;rank<=3;rank++){
+    for(rank=0;rank<=2;rank++){
       C=&B[256*rank];
       d = rank*8;
       for(i=N-remainder;i<N;i++){
         c = (reader[i] >> d) & mask;
         C[c]+=1;
       }
+    }
+
+    rank=3;
+    C=&B[256*rank];
+    d = rank*8;
+    for(i=N-remainder;i<N;i++){
+      c = (((unsigned)reader[i]) >> d) ^ 0x00000080;
+      C[c]+=1;
     }
 
     /* TODO scan over all histograms not just C 
