@@ -171,13 +171,10 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
       c = (reader[i] >> d) & mask;
 
       offset = W[c]-O[c];
-      //printf("... value %08x rank %u got %02x putting it in column position: %u\n",reader[i],rank,c,(offset%bw));
-
 
       iB[(c*bw)+(offset%bw)] = ireader[i];
       B [(c*bw)+(offset%bw)] = reader[i];
       if(((offset+1)%bw)==0){
-        //printf("... flushing memory buffers.\n");
         memcpy(&iwriter[W[c]-bw+1], &iB[c*bw] ,bw*sizeof(unsigned int));
         memcpy(&writer [W[c]-bw+1], &B[c*bw]  ,bw*sizeof(int32_t));
       }
@@ -202,16 +199,30 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   /* unroll the last rank because we have to do something a bit different */
 
   rank=3;
-
   W=&H[256*rank];
+  memcpy(O,W,256*sizeof(unsigned int));
   d = rank*8;
 
   for(i=0;i<N;i++){
     c = (((unsigned)reader[i]) >> d) ^ 0x00000080;
-    iwriter[W[c]]=ireader[i];
-    writer[W[c]] = reader[i];
+
+    offset = W[c]-O[c];
+
+    iB[(c*bw)+(offset%bw)] = ireader[i];
+    B [(c*bw)+(offset%bw)] = reader[i];
+    if(((offset+1)%bw)==0){
+      memcpy(&iwriter[W[c]-bw+1], &iB[c*bw] ,bw*sizeof(unsigned int));
+      memcpy(&writer [W[c]-bw+1], &B[c*bw]  ,bw*sizeof(int32_t));
+    }
     W[c]+=1;
   }
+  for(i=0;i<256;i++){
+    offset = W[i]-O[i];
+    memcpy(&iwriter[W[i]-(offset%bw)],&iB[i*bw],(offset%bw)*sizeof(unsigned int));
+    memcpy(&writer [W[i]-(offset%bw)] ,&B[i*bw],(offset%bw)*sizeof(int32_t));
+  } 
+
+  /* End unrolling */
 
 
   if((*p=realloc(*p,sizeof(unsigned int)*N))==NULL){
