@@ -62,6 +62,7 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   const unsigned int *ireader;
   const int32_t *reader;
   int32_t *writer;
+  unsigned int S,temp;
 
   static const unsigned int BLOCKSIZE = 4;
   unsigned int remainder;
@@ -142,10 +143,14 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
 
     for(rank=0;rank<=3;rank++){
       C=&B[256*rank];
-      d = rank*8;
-      for(i=1;i<256;i++){
-        C[i]=C[i]+C[i-1];
+      S = 0;
+      temp =0;
+      for(i=0;i<256;i++){
+        temp=C[i];
+        C[i]=S;
+        S+=temp;
       }
+      C[0]=0;
     }
   /* end removed ranks */
  
@@ -153,12 +158,11 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   for(rank=0;rank<=2;rank++){
     C=&B[256*rank];
     d = rank*8;
-    for(j=1;j<=N;j++){
-      i=N-j;
+    for(i=0;i<N;i++){
       c = (reader[i] >> d) & mask;
-      iwriter[C[c]-1]=ireader[i];
-      writer[C[c]-1] = reader[i];
-      C[c]-=1;
+      iwriter[C[c]]=ireader[i];
+      writer[C[c]] = reader[i];
+      C[c]+=1;
     }
 
 
@@ -178,12 +182,11 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   C=&B[256*rank];
   d = rank*8;
 
-  for(j=1;j<=N;j++){
-    i=N-j;
+  for(i=0;i<N;i++){
     c = (((unsigned)reader[i]) >> d) ^ 0x00000080;
-    iwriter[C[c]-1]=ireader[i];
-    writer[C[c]-1] = reader[i];
-    C[c]-=1;
+    iwriter[C[c]]=ireader[i];
+    writer[C[c]] = reader[i];
+    C[c]+=1;
   }
 
 
