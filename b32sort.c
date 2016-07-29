@@ -163,12 +163,12 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   /* Start sort on the ranks */
  
 
-  for(rank=0;rank<=2;rank++){
+  for(rank=0;rank<=3;rank++){
     W=&H[256*rank];
     memcpy(O,W,256*sizeof(unsigned int));
     d = rank*8;
     for(i=0;i<N;i++){
-      c = (reader[i] >> d) & mask;
+      c = (rank<=2) ? ((reader[i] >> d) & mask) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
 
       offset = W[c]-O[c];
 
@@ -194,36 +194,6 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     reader=&buff[((rank+1)%2)*N];
 
   }
-
-
-  /* unroll the last rank because we have to do something a bit different */
-
-  rank=3;
-  W=&H[256*rank];
-  memcpy(O,W,256*sizeof(unsigned int));
-  d = rank*8;
-
-  for(i=0;i<N;i++){
-    c = (((unsigned)reader[i]) >> d) ^ 0x00000080;
-
-    offset = W[c]-O[c];
-
-    iB[(c*bw)+(offset%bw)] = ireader[i];
-    B [(c*bw)+(offset%bw)] = reader[i];
-    if(((offset+1)%bw)==0){
-      memcpy(&iwriter[W[c]-bw+1], &iB[c*bw] ,bw*sizeof(unsigned int));
-      memcpy(&writer [W[c]-bw+1], &B[c*bw]  ,bw*sizeof(int32_t));
-    }
-    W[c]+=1;
-  }
-  for(i=0;i<256;i++){
-    offset = W[i]-O[i];
-    memcpy(&iwriter[W[i]-(offset%bw)],&iB[i*bw],(offset%bw)*sizeof(unsigned int));
-    memcpy(&writer [W[i]-(offset%bw)] ,&B[i*bw],(offset%bw)*sizeof(int32_t));
-  } 
-
-  /* End unrolling */
-
 
   if((*p=realloc(*p,sizeof(unsigned int)*N))==NULL){
     return(1);
