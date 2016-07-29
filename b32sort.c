@@ -3,11 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <emmintrin.h>
-#define _0(x) (x &         0x000000FF)
-#define _1(x) ((x >> 8) &  0x000000FF)
-#define _2(x) ((x >> 16) & 0x000000FF)
-#define _3(x) ((x >> 24) & 0x000000FF)
 
 int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
   unsigned int i;
@@ -39,7 +34,6 @@ int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
       return(1);
     }
   }
-  //printf("sort is valid.\n");
 
   return(0);
 } 
@@ -49,35 +43,16 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   unsigned int *W,*H,*iB,*O,L[(bw*256)+(5*256)];
   int B[bw*256];
 
-  unsigned int i,j;
+  unsigned int i;
   unsigned int d;
-  static const unsigned int mask = 0x000000FF;
-  static const unsigned int dmask1[4] = {0xFF,0xFF,0xFF,0xFF};
-  static const unsigned int dmask2[4] = {0xFF00,0xFF00,0xFF00,0xFF00};
-  static const unsigned int dmask3[4] = {0xFF0000,0xFF0000,0xFF0000,0xFF0000};
-  static const unsigned int dmask4[4] = {0x80000000,0x80000000,0x80000000,0x80000000};
-  unsigned int h1[4];
-  unsigned int h2[4];
-  unsigned int h3[4];
-  unsigned int h4[4];
   unsigned int *iwriter,rank,*I;
   const unsigned int *ireader;
   const int32_t *reader;
   int32_t *writer;
   unsigned int S,temp;
-  int32_t c=0,*buff;
+  int32_t c,*buff;
   int offset;
 
-
-  static const unsigned int BLOCKSIZE = 4;
-  unsigned int remainder;
-  __m128i *src, xmm0,xmask1,xmask2,xmask3,xmask4,r1,r2,r3,r4;
-
-  remainder = N%BLOCKSIZE;
-  xmask1 = _mm_loadu_si128((__m128i*)dmask1);
-  xmask2 = _mm_loadu_si128((__m128i*)dmask2);
-  xmask3 = _mm_loadu_si128((__m128i*)dmask3);
-  xmask4 = _mm_loadu_si128((__m128i*)dmask4);
 
   memset(L,0,sizeof(unsigned int)*((bw*256)+(5*256)));
   iB = &L[0];
@@ -105,50 +80,13 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   reader=&a[0];
   writer=&buff[N];
 
-  /* removed ranks from here */
-  src = (__m128i*)reader; 
-  for(i=0;i<N-remainder;i+=BLOCKSIZE){
-    xmm0 = _mm_loadu_si128(src++);
-    r1 = _mm_and_si128(xmm0,xmask1);
-    r2 = _mm_and_si128(xmm0,xmask2);
-    r3 = _mm_and_si128(xmm0,xmask3);
-    r4 = _mm_xor_si128(xmm0,xmask4);
-
-    r2 = _mm_srli_epi32(r2,8);
-    r3 = _mm_srli_epi32(r3,16);
-    r4 = _mm_srli_epi32(r4,24);
-    _mm_storeu_si128((__m128i *)h1,r1);
-    _mm_storeu_si128((__m128i *)h2,r2);
-    _mm_storeu_si128((__m128i *)h3,r3);
-    _mm_storeu_si128((__m128i *)h4,r4);
-    for(j=0;j<BLOCKSIZE;j++){
-      H[h1[j]]+=1;
-      H[(256*1)+h2[j]]+=1;
-      H[(256*2)+h3[j]]+=1;
-      H[(256*3)+h4[j]]+=1;
-    }
-  }
-
-  for(rank=0;rank<=2;rank++){
-    W=&H[256*rank];
-    d = rank*8;
-    for(i=N-remainder;i<N;i++){
-      c = (reader[i] >> d) & mask;
-      W[c]+=1;
-    }
-  }
-
-  rank=3;
-  W=&H[256*rank];
-  d = rank*8;
-  for(i=N-remainder;i<N;i++){
-    c = (((unsigned)reader[i]) >> d) ^ 0x00000080;
-    W[c]+=1;
-  }
-
-
   for(rank=0;rank<=3;rank++){
     W=&H[256*rank];
+    d = rank*8;
+    for(i=0;i<N;i++){
+      c = (rank <=2 ) ? ((reader[i] >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
+      W[c]+=1;
+    }
     S = 0;
     temp =0;
     for(i=0;i<256;i++){
@@ -159,7 +97,6 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     W[0]=0;
   }
 
-
   /* Start sort on the ranks */
  
 
@@ -168,7 +105,7 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     memcpy(O,W,256*sizeof(unsigned int));
     d = rank*8;
     for(i=0;i<N;i++){
-      c = (rank<=2) ? ((reader[i] >> d) & mask) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
+      c = (rank<=2) ? ((reader[i] >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
 
       offset = W[c]-O[c];
 
