@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#define _0(x) (x &         0x000000FF)
+#define _1(x) ((x >> 8) &  0x000000FF)
+#define _2(x) ((x >> 16) & 0x000000FF)
+#define _3(x) ((((unsigned) x ) >> 24) ^ 0x00000080)
 
 int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
   unsigned int i;
@@ -51,10 +55,11 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   int32_t *writer;
   unsigned int S,temp;
   int32_t c,*buff;
-  int offset;
+  int offset,start,sz;
 
 
   memset(L,0,sizeof(unsigned int)*((bw*256)+(5*256)));
+  memset(B,0,sizeof(int)*256*bw);
   iB = &L[0];
   H  = &L[bw*256];
   O  = &L[(bw*256)+(4*256)];
@@ -80,13 +85,15 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   reader=&a[0];
   writer=&buff[N];
 
+  for(i=0;i<N;i++){
+    H[(256*0)+_0(reader[i])]+=1;
+    H[(256*1)+_1(reader[i])]+=1;
+    H[(256*2)+_2(reader[i])]+=1;
+    H[(256*3)+_3(reader[i])]+=1;
+  }
+
   for(rank=0;rank<=3;rank++){
     W=&H[256*rank];
-    d = rank*8;
-    for(i=0;i<N;i++){
-      c = (rank <=2 ) ? ((reader[i] >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
-      W[c]+=1;
-    }
     S = 0;
     temp =0;
     for(i=0;i<256;i++){
@@ -105,7 +112,7 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     memcpy(O,W,256*sizeof(unsigned int));
     d = rank*8;
     for(i=0;i<N;i++){
-      c = (rank<=2) ? ((reader[i] >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
+      c = (rank<=2) ? ((((unsigned)reader[i]) >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
 
       offset = W[c]-O[c];
 
