@@ -118,11 +118,11 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
 
       iB[(c*bw)+(offset%bw)] = ireader[i];
       B [(c*bw)+(offset%bw)] = reader[i];
-      if(((offset+1)%bw)==0){
-        memcpy(&iwriter[W[c]-bw+1], &iB[c*bw] ,bw*sizeof(unsigned int));
-        memcpy(&writer [W[c]-bw+1], &B[c*bw]  ,bw*sizeof(int32_t));
-      }
       W[c]+=1;
+      if(((offset+1)%bw)==0){
+        memcpy(&iwriter[W[c]-bw], &iB[c*bw] ,bw*sizeof(unsigned int));
+        memcpy(&writer [W[c]-bw], &B[c*bw]  ,bw*sizeof(int32_t));
+      }
     }
     for(i=0;i<256;i++){
       offset = W[i]-O[i];
