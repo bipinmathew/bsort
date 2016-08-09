@@ -61,8 +61,8 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
   memset(L,0,sizeof(unsigned int)*((bw*256)+(5*256)));
   memset(B,0,sizeof(int)*256*bw);
   iB = &L[0];
-  H  = &L[bw*256];
-  O  = &L[(bw*256)+(4*256)];
+  O  = &L[bw*256];
+  H  = &L[bw*256+256];
 
   if((buff=malloc(2*N*sizeof(int32_t)))==NULL){
     return(1);
@@ -136,6 +136,8 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
 
     writer=&buff[((rank)%2)*N];
     reader=&buff[((rank+1)%2)*N];
+
+    O=W;
 
   }
 
