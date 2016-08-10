@@ -213,9 +213,18 @@ int main(int argc, char **argv){
       printf("malloc failed...\n");
       exit(1);
     }
-    //I = (unsigned int *)malloc(sizeof(unsigned int)*N);
     for(i=0;i<N;i++){
-      a[i] = (rand()%(2*M))-M;
+      if(argc>3){
+        if(0==strcmp(argv[3],"UNSIGNED")){
+          a[i] = rand()%M;
+        }
+        else{
+          a[i] = (rand()%(2*M))-M;
+        }
+      }
+      else{
+          a[i] = (rand()%(2*M))-M;
+      }
     }
 
 
