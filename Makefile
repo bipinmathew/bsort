@@ -12,5 +12,5 @@ tests: ssum_test.c ssum.o
 	gcc -O2 -o ssum_test ssum_test.c ssum.o
 
 clean:
-	rm -f *.o b32sort_test
+	rm -f *.o b32sort_test libkb32sort.so
 
