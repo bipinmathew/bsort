@@ -50,7 +50,7 @@ int b32sort(const int32_t *a, unsigned int *I, unsigned int N){
   unsigned int i;
   unsigned int d;
   unsigned int *iwriter,rank,numranks;
-  const unsigned int *ireader;
+  unsigned int *ireader;
   const int32_t *reader;
   int32_t *writer;
   unsigned int S,temp;
