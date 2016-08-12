@@ -42,20 +42,21 @@ int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
   return(0);
 } 
 
-int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
+int b32sort(const int32_t *a, unsigned int *I, unsigned int N){
   static const unsigned int bw = 32;
   unsigned int *W,*H,*iB,*O,L[(bw*256)+(5*256)],nopermute;
   int B[bw*256];
 
   unsigned int i;
   unsigned int d;
-  unsigned int *iwriter,rank,numranks,*I;
+  unsigned int *iwriter,rank,numranks;
   const unsigned int *ireader;
   const int32_t *reader;
   int32_t *writer;
   unsigned int S,temp;
   int32_t c,*buff;
   int offset,start,sz;
+  unsigned int *ibuff,*iswap;
 
 
   memset(L,0,sizeof(unsigned int)*((bw*256)+(5*256)));
@@ -68,12 +69,9 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     return(1);
   }
 
-  *p = NULL;
-  if((*p = malloc(2*N*sizeof(unsigned int)))==NULL){
+  if((ibuff = malloc(N*sizeof(unsigned int)))==NULL){
     return(1);
   }
-
-  I = *p;
 
 
   for(i=0;i<N;i++){
@@ -81,6 +79,7 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     H[(256*1)+_1(a[i])]+=1;
     H[(256*2)+_2(a[i])]+=1;
     H[(256*3)+_3(a[i])]+=1;
+    I[i]=i;
   }
 
 
@@ -103,12 +102,9 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
 
   /* 0 if numranks is even, N otherwise. */
   start = (numranks%2);
-  iwriter=&I[N*start];
-  for(i=0;i<N;i++){
-    iwriter[i]=i;
-  }
-  ireader=iwriter;
-  iwriter=&I[((start+1)%2)*N];
+
+  ireader=I;
+  iwriter=ibuff;
 
   reader=&a[0];
   writer=&buff[((start+1)%2)*N];
@@ -139,9 +135,10 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
       memcpy(&writer [W[i]-(offset%bw)] ,&B[i*bw],(offset%bw)*sizeof(int32_t));
     } 
 
+    iswap = ireader;
+    ireader = iwriter;
+    iwriter = iswap;
 
-    iwriter=&I[((rank+start)%2)*N];
-    ireader=&I[((rank+1+start)%2)*N];
 
     writer=&buff[((rank+start)%2)*N];
     reader=&buff[((rank+1+start)%2)*N];
@@ -149,13 +146,12 @@ int b32sort(const int32_t *a, unsigned int **p, unsigned int N){
     O=W;
 
   }
-
-
-  free(buff);
-
-  if((*p=realloc(*p,sizeof(unsigned int)*N))==NULL){
-    return(1);
+  if(numranks%2){
+    memcpy(I,ibuff,N*sizeof(unsigned int));
   }
+
+  free(ibuff);
+  free(buff);
 
   return(0);
 }
@@ -170,7 +166,7 @@ int main(int argc, char **argv){
 
   if(argc<3){
 
-    printf("N,M,time,int32_t/sec\n",N,M,diff,N/diff);
+    printf("N,M,time,int32_t/sec\n");
     N=1;
     for(n=0;n<8;n++){
       N*=10;
@@ -181,7 +177,12 @@ int main(int argc, char **argv){
             printf("malloc failed...\n");
             exit(1);
           }
-          //I = (unsigned int *)malloc(sizeof(unsigned int)*N);
+
+
+          if((I = malloc(sizeof(unsigned int)*N))==NULL){
+            printf("malloc failed...\n");
+            exit(1);
+          }
 
           diff = 0;
           for(testnum=0;testnum<numtests;testnum++){
@@ -189,7 +190,7 @@ int main(int argc, char **argv){
                 a[i] = (rand()%(2*M))-M;
               }
               begin=clock();
-              e=b32sort(a,&I,N);
+              e=b32sort(a,I,N);
               end=clock();
               diff+=(double)(end - begin) / CLOCKS_PER_SEC;
               if(e>0){
@@ -218,6 +219,12 @@ int main(int argc, char **argv){
       printf("malloc failed...\n");
       exit(1);
     }
+
+
+    if((I = malloc(sizeof(unsigned int)*N))==NULL){
+      printf("malloc failed...\n");
+      exit(1);
+    }
     for(i=0;i<N;i++){
       if(argc>3){
         if(0==strcmp(argv[3],"UNSIGNED")){
@@ -234,7 +241,7 @@ int main(int argc, char **argv){
 
 
     begin=clock();
-    e=b32sort(a,&I,N);
+    e=b32sort(a,I,N);
     end=clock();
     diff=(double)(end - begin) / CLOCKS_PER_SEC;
 
