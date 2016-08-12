@@ -8,8 +8,8 @@
 #define _2(x) ((x >> 16) & 0x000000FF)
 #define _3(x) ((((unsigned) x ) >> 24) ^ 0x00000080)
 
-int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
-  unsigned int i;
+int validate_sort(const int32_t *a, const uint32_t *p, uint32_t N){
+  uint32_t i;
 
   for(i=1;i<N;i++){
     if(a[p[i]]<a[p[i-1]]){
@@ -42,54 +42,57 @@ int validate_sort(const int32_t *a, const unsigned int *p, unsigned int N){
   return(0);
 } 
 
-int b32sort(const int32_t *a, unsigned int *I, unsigned int N){
-  static const unsigned int bw = 32;
-  unsigned int *W,*H,*iB,*O,L[(bw*256)+(5*256)],nopermute;
-  int B[bw*256];
+int b32sort(const int32_t *a, uint32_t *I, uint32_t N){
+  static const uint32_t RANKWIDTH = 8;
+  static const uint32_t MAXRANKS = 32/RANKWIDTH;
+  static const uint32_t BINWIDTH = 1<<RANKWIDTH;
+  static const uint32_t BW = 32;
+  uint32_t *W,*H,*iB,*O,L[(BW*BINWIDTH)+((MAXRANKS+1)*BINWIDTH)],nopermute;
+  int B[BW*BINWIDTH];
 
-  unsigned int i;
-  unsigned int d;
-  unsigned int *iwriter,rank,numranks;
-  unsigned int *ireader;
+  uint32_t i;
+  uint32_t d;
+  uint32_t *iwriter,rank,numranks;
+  uint32_t *ireader;
   const int32_t *reader;
   int32_t *writer;
-  unsigned int S,temp;
+  uint32_t S,temp;
   int32_t c,*buff;
   int offset,start,sz;
-  unsigned int *ibuff,*iswap;
+  uint32_t *ibuff,*iswap;
 
 
-  memset(L,0,sizeof(unsigned int)*((bw*256)+(5*256)));
-  memset(B,0,sizeof(int)*256*bw);
+  memset(L,0,sizeof(uint32_t)*((BW*BINWIDTH)+((MAXRANKS+1)*BINWIDTH)));
+  memset(B,0,sizeof(int)*BINWIDTH*BW);
   iB = &L[0];
-  O  = &L[bw*256];
-  H  = &L[bw*256+256];
+  O  = &L[BW*BINWIDTH];
+  H  = &L[BW*BINWIDTH+BINWIDTH];
 
   if((buff=malloc(2*N*sizeof(int32_t)))==NULL){
     return(1);
   }
 
-  if((ibuff = malloc(N*sizeof(unsigned int)))==NULL){
+  if((ibuff = malloc(N*sizeof(uint32_t)))==NULL){
     return(1);
   }
 
 
   for(i=0;i<N;i++){
-    H[(256*0)+_0(a[i])]+=1;
-    H[(256*1)+_1(a[i])]+=1;
-    H[(256*2)+_2(a[i])]+=1;
-    H[(256*3)+_3(a[i])]+=1;
+    H[(BINWIDTH*0)+_0(a[i])]+=1;
+    H[(BINWIDTH*1)+_1(a[i])]+=1;
+    H[(BINWIDTH*2)+_2(a[i])]+=1;
+    H[(BINWIDTH*3)+_3(a[i])]+=1;
     I[i]=i;
   }
 
 
   numranks=0;
-  for(rank=0;rank<=3;rank++){
-    W=&H[256*rank];
+  for(rank=0;rank<MAXRANKS;rank++){
+    W=&H[BINWIDTH*rank];
     S = 0;
     temp =0;
     nopermute=0;
-    for(i=0;i<256;i++){
+    for(i=0;i<BINWIDTH;i++){
       nopermute = (W[i]==N) ? 1 : nopermute;
       temp=W[i];
       W[i]=S;
@@ -113,26 +116,26 @@ int b32sort(const int32_t *a, unsigned int *I, unsigned int N){
  
 
   for(rank=0;rank<numranks;rank++){
-    W=&H[256*rank];
-    memcpy(O,W,256*sizeof(unsigned int));
-    d = rank*8;
+    W=&H[BINWIDTH*rank];
+    memcpy(O,W,BINWIDTH*sizeof(uint32_t));
+    d = rank*RANKWIDTH;
     for(i=0;i<N;i++){
-      c = (rank<=2) ? ((((unsigned)reader[i]) >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
+      c = (rank<(MAXRANKS-1)) ? ((((unsigned)reader[i]) >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
 
       offset = W[c]-O[c];
 
-      iB[(c*bw)+(offset%bw)] = ireader[i];
-      B [(c*bw)+(offset%bw)] = reader[i];
+      iB[(c*BW)+(offset%BW)] = ireader[i];
+      B [(c*BW)+(offset%BW)] = reader[i];
       W[c]+=1;
-      if(((offset+1)%bw)==0){
-        memcpy(&iwriter[W[c]-bw], &iB[c*bw] ,bw*sizeof(unsigned int));
-        memcpy(&writer [W[c]-bw], &B[c*bw]  ,bw*sizeof(int32_t));
+      if(((offset+1)%BW)==0){
+        memcpy(&iwriter[W[c]-BW], &iB[c*BW] ,BW*sizeof(uint32_t));
+        memcpy(&writer [W[c]-BW], &B[c*BW]  ,BW*sizeof(int32_t));
       }
     }
-    for(i=0;i<256;i++){
+    for(i=0;i<BINWIDTH;i++){
       offset = W[i]-O[i];
-      memcpy(&iwriter[W[i]-(offset%bw)],&iB[i*bw],(offset%bw)*sizeof(unsigned int));
-      memcpy(&writer [W[i]-(offset%bw)] ,&B[i*bw],(offset%bw)*sizeof(int32_t));
+      memcpy(&iwriter[W[i]-(offset%BW)],&iB[i*BW],(offset%BW)*sizeof(uint32_t));
+      memcpy(&writer [W[i]-(offset%BW)] ,&B[i*BW],(offset%BW)*sizeof(int32_t));
     } 
 
     iswap = ireader;
@@ -147,7 +150,7 @@ int b32sort(const int32_t *a, unsigned int *I, unsigned int N){
 
   }
   if(numranks%2){
-    memcpy(I,ibuff,N*sizeof(unsigned int));
+    memcpy(I,ibuff,N*sizeof(uint32_t));
   }
 
   free(ibuff);
