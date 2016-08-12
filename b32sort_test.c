@@ -33,7 +33,7 @@ int main(int argc, char **argv){
           diff = 0;
           for(testnum=0;testnum<numtests;testnum++){
               for(i=0;i<N;i++){
-                a[i] = (rand()%(2*M))-M;
+                a[i] = (rand()%M);
               }
               begin=clock();
               e=b32sort(a,I,N);

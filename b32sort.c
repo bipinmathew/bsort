@@ -3,10 +3,17 @@
 #include <stdio.h>
 #include <string.h>
 #include "b32sort.h"
-#define _0(x) (x &         0x000000FF)
-#define _1(x) ((x >> 8) &  0x000000FF)
-#define _2(x) ((x >> 16) & 0x000000FF)
-#define _3(x) ((((unsigned) x ) >> 24) ^ 0x00000080)
+
+#define _0(x) (x &         0x0000000F)
+#define _1(x) ((x >> 4)  & 0x0000000F)
+#define _2(x) ((x >> 8)  & 0x0000000F)
+#define _3(x) ((x >> 12) & 0x0000000F)
+#define _4(x) ((x >> 16) & 0x0000000F)
+#define _5(x) ((x >> 20) & 0x0000000F)
+#define _6(x) ((x >> 24) & 0x0000000F)
+#define _7(x) ((((unsigned) x ) >> 28) ^ 0x00000008)
+
+
 
 int validate_sort(const int32_t *a, const uint32_t *p, uint32_t N){
   uint32_t i;
@@ -43,11 +50,11 @@ int validate_sort(const int32_t *a, const uint32_t *p, uint32_t N){
 } 
 
 int b32sort(const int32_t *a, uint32_t *I, uint32_t N){
-  static const uint32_t RANKWIDTH = 8;
+  static const uint32_t RANKWIDTH = 4;
   static const uint32_t MAXRANKS = 32/RANKWIDTH;
   static const uint32_t BINWIDTH = 1<<RANKWIDTH;
-  static const uint32_t BW = 32;
-  uint32_t *W,*H,*iB,*O,L[(BW*BINWIDTH)+((MAXRANKS+1)*BINWIDTH)],nopermute;
+  static const uint32_t BW = 64;
+  uint32_t *W,*H,*iB,*O,*L,nopermute;
   int B[BW*BINWIDTH];
 
   uint32_t i;
@@ -61,8 +68,9 @@ int b32sort(const int32_t *a, uint32_t *I, uint32_t N){
   int offset,start,sz;
   uint32_t *ibuff,*iswap;
 
+  L = calloc(((BW*BINWIDTH)+((MAXRANKS+1)*BINWIDTH)),sizeof(uint32_t));
 
-  memset(L,0,sizeof(uint32_t)*((BW*BINWIDTH)+((MAXRANKS+1)*BINWIDTH)));
+
   memset(B,0,sizeof(int)*BINWIDTH*BW);
   iB = &L[0];
   O  = &L[BW*BINWIDTH];
@@ -82,6 +90,10 @@ int b32sort(const int32_t *a, uint32_t *I, uint32_t N){
     H[(BINWIDTH*1)+_1(a[i])]+=1;
     H[(BINWIDTH*2)+_2(a[i])]+=1;
     H[(BINWIDTH*3)+_3(a[i])]+=1;
+    H[(BINWIDTH*4)+_4(a[i])]+=1;
+    H[(BINWIDTH*5)+_5(a[i])]+=1;
+    H[(BINWIDTH*6)+_6(a[i])]+=1;
+    H[(BINWIDTH*7)+_7(a[i])]+=1;
     I[i]=i;
   }
 
@@ -120,7 +132,7 @@ int b32sort(const int32_t *a, uint32_t *I, uint32_t N){
     memcpy(O,W,BINWIDTH*sizeof(uint32_t));
     d = rank*RANKWIDTH;
     for(i=0;i<N;i++){
-      c = (rank<(MAXRANKS-1)) ? ((((unsigned)reader[i]) >> d) & 0x000000FF) : ((((unsigned)reader[i]) >> d) ^ 0x00000080);
+      c = (rank<(MAXRANKS-1)) ? ((((unsigned)reader[i]) >> d) & 0x0000000F) : ((((unsigned)reader[i]) >> d) ^ 0x00000008);
 
       offset = W[c]-O[c];
 
@@ -153,6 +165,7 @@ int b32sort(const int32_t *a, uint32_t *I, uint32_t N){
     memcpy(I,ibuff,N*sizeof(uint32_t));
   }
 
+  free(L);
   free(ibuff);
   free(buff);
 
